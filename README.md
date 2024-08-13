@@ -1,3 +1,22 @@
+## agri-frontend (nextjs)
+
+ignore all route folders inside /src/app folder below: (Don't use any routes as there is separated backend for it which is NOT Shared)
+1. animate
+2. delete
+3. login
+4. signup
+
+The route to be looked into is upload folder
+
+the main image uploader is inside dropzone.jsx component inside the components folder.
+
+go onto localhost:3000/upload to get to image component
+
+
+
+
+
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
