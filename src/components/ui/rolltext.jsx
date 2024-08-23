@@ -23,7 +23,7 @@ const RotatingText = () => {
           }
           return prevIndex - 1;
         });
-      }, 1000);
+      }, 300); // Faster reverse speed
     } else {
       interval = setInterval(() => {
         setIndex((prevIndex) => {
@@ -31,36 +31,34 @@ const RotatingText = () => {
             setIsReversing(true);
             return prevIndex;
           }
-          return (prevIndex + 1) % words.length;
+          return prevIndex + 1;
         });
-      }, 2000); // Normal animation speed
+      }, 2000); // Normal forward animation speed
     }
 
     return () => clearInterval(interval);
   }, [isReversing]);
 
   return (
-    <>
-      <div className="h-16 overflow-hidden">
-        <AnimatePresence mode="wait">
-          <motion.div
-            className="text-red-500 text-5xl font-lato font-bold"
-            key={words[index]}
-            initial={{ opacity: 1, y: isReversing ? -60 : 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 1, y: isReversing ? 60 : -60 }}
-            transition={{
-              duration: isReversing ? 1 : 3,
-              type: "spring",
-              stiffness: 600,
-              damping: 24,
-            }}
-          >
-            {words[index]}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </>
+    <div className="h-16 overflow-hidden">
+      <AnimatePresence mode="wait">
+        <motion.div
+          className="text-red-500 text-5xl font-lato font-bold"
+          key={words[index]}
+          initial={{ opacity: 0, y: isReversing ? -60 : 60 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: isReversing ? 60 : -60 }}
+          transition={{
+            duration: isReversing ? 0.3 : 1.5,
+            type: "spring",
+            stiffness: 500,
+            damping: 30,
+          }}
+        >
+          {words[index]}
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 };
 

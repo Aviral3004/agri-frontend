@@ -1,21 +1,28 @@
 import axios from "axios";
 import Image from "next/image";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { IoMdClose } from "react-icons/io";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { motion, AnimatePresence } from "framer-motion";
 
 function MyDropzone({ className }) {
   const [files, setFiles] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(0); //! For progress bar
+  const [retryAttempts, setRetryAttempts] = useState(0);
+  // const [failedFiles, setFailedFiles] = useState([]);
+  let failedFiles = [];
+  const [retryingMessage, setRetryingMessage] = useState(""); //! For retrying message
+  const [uploadMessage, setUploadMessage] = useState(""); //! For initial uploading messages (first upload)
+  const [uploading, setUploading] = useState(false);
+  const [uploadedCount, setUploadedCount] = useState(0); //! Track number of files uploaded
+
+  const initialFilesCount = useRef(0); // To keep track of the initial number of files
+  const [finalFailedFiles, setFinalFailedFiles] = useState([]);
 
   const onDrop = useCallback(
     (acceptedFiles, rejectedFiles) => {
-      // Do something with the files
-      // console.log(acceptedFiles);
-
-      // console.log(rejectedFiles);
-
       //! for rejected files
       let fileSizeError = false;
       let fileCountError = false;
@@ -42,14 +49,14 @@ function MyDropzone({ className }) {
       }
 
       //! for accepted files
-      // if (acceptedFiles?.length) {
-      //   setFiles((previousFiles) => [
-      //     ...previousFiles,
-      //     ...acceptedFiles.map((file) =>
-      //       Object.assign(file, { preview: URL.createObjectURL(file) })
-      //     ),
-      //   ]);
-      // }
+      //   if (acceptedFiles?.length) {
+      //     setFiles((previousFiles) => [
+      //       ...previousFiles,
+      //       ...acceptedFiles.map((file) =>
+      //         Object.assign(file, { preview: URL.createObjectURL(file) })
+      //       ),
+      //     ]);
+      //   }
 
       const newFiles = acceptedFiles.filter((file) => {
         const isDuplicate = files.some(
@@ -66,20 +73,21 @@ function MyDropzone({ className }) {
         toast.error("Duplicate files detected! They will not be inserted.");
       }
 
+      //   if (newFiles?.length) {
+      //     setFiles((previousFiles) => [
+      //       ...previousFiles,
+      //       ...newFiles.map((file) =>
+      //         Object.assign(file, { preview: URL.createObjectURL(file) })
+      //       ),
+      //     ]);
+
       if (newFiles?.length) {
-        setFiles((previousFiles) => [
-          ...previousFiles,
-          ...newFiles.map((file) =>
-            Object.assign(file, { preview: URL.createObjectURL(file) })
-          ),
-        ]);
+        setFiles((previousFiles) => [...previousFiles, ...newFiles]);
       }
 
-      //   if (!fileSizeError && !fileCountError && !duplicateFileError) {
-      //     toast.success("Files accepted successfully!");
-      //   }
-
-      // console.log(rejectedFiles);
+      if (!fileSizeError && !fileCountError && !duplicateFileError) {
+        toast.success(`${newFiles.length} file(s) accepted!`);
+      }
     },
     [files]
   );
@@ -93,13 +101,57 @@ function MyDropzone({ className }) {
     maxSize: 1024 * 10000,
   });
 
-  const removeFile = (name) => {
-    setFiles((files) => files.filter((file) => file.name !== name));
-  };
+  //! for removing files
+  //   const removeFile = (name) => {
+  //     setFiles((files) => files.filter((file) => file.name !== name));
+  //   };
 
   //   const removeRejected = (name) => {
   //     setRejectedFiles((files) => files.filter(({ file }) => file.name !== name));
   //   };
+
+  //! UploadAllFiles and uplodFile functions
+  //* HERE IS THE axios POST REQUEST TO SEND ALL IMAGES TO CLOUD (Can change it to backend URL later)
+  const URL = process.env.NEXT_PUBLIC_CLOUDINARY_URL;
+  const uploadFile = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "agri-images");
+
+    //! Introduce a random failure
+    const shouldFail = Math.random() < 0.7; // 70% chance to fail
+
+    if (shouldFail) {
+      failedFiles = [...failedFiles, file];
+      return;
+    }
+
+    try {
+      await axios.post(URL, formData);
+      setUploadedCount((prevCount) => {
+        const newCount = prevCount + 1;
+        console.log(
+          "Progress calculation",
+          newCount,
+          initialFilesCount.current
+        );
+
+        setUploadProgress(
+          Math.round((newCount / initialFilesCount.current) * 100)
+        );
+
+        return newCount;
+      });
+    } catch (error) {
+      console.log("error in sending");
+      failedFiles = [...failedFiles, file];
+    }
+  };
+
+  const uploadAllFiles = async (filesToUpload) => {
+    const uploadPromises = filesToUpload.map((file) => uploadFile(file));
+    await Promise.all(uploadPromises);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,92 +161,62 @@ function MyDropzone({ className }) {
       return;
     }
 
+    //! initial state
+    initialFilesCount.current = files.length;
+    setUploadProgress(0);
+    setRetryAttempts(0);
+    setRetryingMessage("");
+    setUploadMessage("Uploading...");
+    setUploading(true);
+    setUploadedCount(0);
+
     // const processingToastId = toast.loading("Processing...");
 
-    //! for single file upload from the end.
-    // const formData = new FormData();
-    // files.forEach((file) => formData.append("file", file));
+    //! Initial upload with Retried attempts (3 attempts max) code
 
-    //* HERE IS THE axios POST REQUEST TO SEND ALL IMAGES TO CLOUD (Can change it to backend URL later)
-
-    try {
-      const URL = process.env.NEXT_PUBLIC_CLOUDINARY_URL;
-      const uploadPromises = files.map(async (file) => {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("upload_preset", "agri-images");
-
-        const response = await axios.post(URL, formData);
-        // console.log(response.data); //! each file response data
-      });
-
-      await toast.promise(
-        Promise.all(uploadPromises),
-        {
-          pending: "Uploading images...",
-          success: "Images sent to Cloudinary successfully!",
-          error: "Failed to send some images to Cloudinary!",
-        },
-        {
-          autoClose: 2000,
+    let success = false;
+    let currFiles = files;
+    for (let i = 0; i < 4 && !success; i++) {
+      console.log(i, " try");
+      await uploadAllFiles(currFiles);
+      console.log("length ", failedFiles.length);
+      if (failedFiles.length === 0) {
+        setUploadMessage("Uploaded successfully!");
+        setTimeout(() => {
+          setUploading(false);
+        }, 5000);
+        console.log("success!");
+        success = true;
+        setFiles([]);
+      } else {
+        if (i !== 3) {
+          setUploadMessage("Initial Upload Failed. Reuploading...");
+          setRetryingMessage(
+            `Error uploading some files (Reuploading Attempt ${i + 1}/3)`
+          );
+        } else {
+          setFinalFailedFiles(failedFiles);
+          console.log(failedFiles);
+          setUploadMessage("Final Upload Failed! Please Retry.");
+          setFiles([]);
         }
-      );
-
-      console.log("All images uploaded successfully!");
-
-      //   const responses = await Promise.all(uploadPromises);
-      //   console.log("All images uploaded succesfully!");
-
-      //   toast.update(processingToastId, {
-      //     render: "Images sent to Cloudinary successfully!",
-      //     type: "success",
-      //     isLoading: false,
-      //     autoClose: 2000,
-      //   });
-    } catch (error) {
-      console.error("File upload failed:", error);
+        currFiles = [...failedFiles];
+        failedFiles = [];
+        setRetryAttempts(i + 1);
+      }
     }
   };
 
   const removeAllFiles = (e) => {
     e.preventDefault();
+    if (files.length === 0) {
+      toast.error("No files to remove!");
+      return;
+    }
     setFiles([]);
+    toast.success("All files removed!");
   };
 
-  //! check upload preset on cloudinary and file uploading format on the website of cloudinary
-  // formData.append("upload_preset", "agri-images");
-
-  // Debugging: Print all key-value pairs in FormData
-  // for (let [key, value] of formData.entries()) {
-  //   console.log(`${key}: ${value instanceof File ? value.name : value}`);
-  // }
-
-  // console.log(formData);
-
-  // const URL = process.env.NEXT_PUBLIC_CLOUDINARY_URL;
-  // console.log(URL);
-  // const data = await axios
-  //   .post(URL, formData)
-  //   .then((res) => {
-  //     toast.update(processingToastId, {
-  //       render: "Images sent to Cloudinary successfully!",
-  //       type: "success",
-  //       isLoading: false,
-  //       autoClose: 5000,
-  //     });
-  //     console.log(res.data);
-  //   })
-  //   .catch((error) => {
-  //     toast.update(processingToastId, {
-  //       render: "Failed to send images to Cloudinary!",
-  //       type: "error",
-  //       isLoading: false,
-  //       autoClose: 5000,
-  //     });
-  //     console.log("File NOT sent to Cloudinary!", error);
-  //   });
-
-  // console.log(data);
   return (
     <>
       <div {...getRootProps({ className: className })}>
@@ -225,11 +247,66 @@ function MyDropzone({ className }) {
         >
           remove all files
         </button>
-        <h1 className="text-2xl border-b-2 pb-4 w-full">Accepted Files:</h1>
-        <ul className="mt-6 grid grid-cols-3 md:grid-cols-4 xl:grid-cols-12 gap-10">
+        {/* Progress Bar */}
+        {/* {uploadProgress > 0 && (
+          <div className="flex flex-col items-center">
+            <div className="w-64 bg-black rounded-full h-4 p-[2px] border-2 border-red-500 box-border">
+              <div
+                className="bg-red-500 h-full rounded-full"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <p className="mt-2 text-white">{uploadProgress}%</p>
+          </div>
+        )} */}
+        <AnimatePresence>
+          {uploading && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col items-center"
+            >
+              <div className="w-64 bg-black rounded-full h-4 border-2 p-[2px] border-red-500 box-border">
+                <motion.div
+                  className="bg-red-500 h-full rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${uploadProgress}%` }}
+                  transition={{ duration: 0.5 }} // Duration of the animation
+                />
+              </div>
+              <p className="mt-2 text-white">{uploadProgress}%</p>
+              <motion.p
+                className="mt-2 text-white"
+                initial={{ opacity: 1 }}
+                animate={{ opacity: [1, 0, 1] }}
+                transition={{ repeat: Infinity, duration: 1 }}
+              >
+                {uploading ? uploadMessage : ""}
+              </motion.p>
+              {/* //! Retry if upload fails (Reuploading message) */}
+              {retryAttempts > 0 && retryAttempts <= 3 && (
+                <motion.p
+                  className="mt-2 text-white"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  {retryingMessage}
+                </motion.p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* //! For preview of Accepted Files */}
+        {/* <h1 className="text-2xl border-b-2 pb-4 w-full">Accepted Files:</h1> */}
+        {/* <ul className="mt-6 grid grid-cols-3 md:grid-cols-4 xl:grid-cols-12 gap-10">
           {files.map((file) => (
-            <li key={file.name} className="relative h-32 rounded-md shadow-lg">
-              <Image
+            <li key={file.name} className="relative h-32 rounded-md shadow-lg"> */}
+        {/* <Image
                 className="h-full w-full object-cover rounded-md"
                 src={file.preview}
                 alt={file.name}
@@ -238,20 +315,20 @@ function MyDropzone({ className }) {
                 onLoad={() => {
                   URL.revokeObjectURL(file.preview); //! to prevent any memory leak
                 }}
-              />
-              <button
+              /> */}
+        {/* <button
                 type="button"
                 className="w-7 h-7 border border-red-400 bg-red-400 rounded-full flex justify-center items-center absolute -top-3 -right-3 hover:bg-white transition-colors"
                 onClick={() => removeFile(file.name)}
               >
                 <IoMdClose className="w-5 h-5 fill-white hover:fill-red-400 transition-colors" />
-              </button>
-              <p className="mt-2 text-white text-[12px] font-medium">
+              </button> */}
+        {/* <p className="mt-2 text-white text-[12px] font-medium">
                 {file.name}
-              </p>
-            </li>
+              </p> */}
+        {/* </li>
           ))}
-        </ul>
+        </ul> */}
         {/* Rejected Files Code */}
         {/* <h1 className="text-2xl border-b-2 pb-4 pt-5">Rejected Files:</h1>
         <ul className="mt-6 flex flex-col">
@@ -277,6 +354,25 @@ function MyDropzone({ className }) {
             </li>
           ))}
         </ul> */}
+        {/*//! Failed Files */}
+        <AnimatePresence>
+          {finalFailedFiles.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.5 }}
+              className="mt-4 text-red-500"
+            >
+              <h2>Failed to upload the following files:</h2>
+              <ul>
+                {finalFailedFiles.map((file) => (
+                  <li key={file.name}>{file.name}</li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </form>
       <ToastContainer
         position="bottom-center" // Set position to bottom center

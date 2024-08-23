@@ -103,7 +103,7 @@ const SignUp = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 h-screen bg-emerald">
         <div className="hidden lg:flex items-center justify-center p-8">
           <img
-            src="https://s3-alpha-sig.figma.com/img/4560/b33c/894bdafa23d933ce1aecffb7afe67ed3?Expires=1722816000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=ktjdznlo1rnFQwnIKYQnyuXaJKqAw8wqFpq9~jw64kH3npERsMXZGSacqHKGC3o6yY-QtVZ8nSrhXPQHx0oZU9tlLeAkRnyD98FDs~BexdUcC3wZOocUTGam17B43uI5rIV~80jy5Bdv0TXXzqutEWSdT7mSTRCY8i0vAFLT0Om265ZawwZl-PSsmVmnl4hNVegHtk1RvaC9EvJFVXI3tUE8ZyJuIYpQGx38b2le3lENjRTsn2vWYWPsB0avUB130yrVrdtZYkIML-y7ZFjT-Q~g7u8hod4uGhToiOxhKLjASiIZfRnv6hMUWbhmLH3MqTuOPWZ2mzvVqH2px7w-Ww__"
+            src="https://s3-alpha-sig.figma.com/img/4560/b33c/894bdafa23d933ce1aecffb7afe67ed3?Expires=1724630400&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=GCo9RcTRTPV~ojhjIZENhB6eOFyoMQ0h6RHslDGTmSVR8ULp~dPR80N9h55DFMv4AdPwWdH600bPpVKsQSBHD3rCa~KevDHeq~UYR70beJbwfipE~4jB7SupPyeJPGjvxTvtal6mozBXIlDgf~~WQ5KjePj2lft18biq~X1ude~1jkrQPrZ~0iN99eNvblFw0IDR5aPt7nhAMhjTE2k4rk3oYiLHUx0ihDsUxMzTkom01Ypkl7i2AHsOt94E8PH7QUtkY1LGwG0spPgh8mDlxmAAhg6NErSnZ00-0GeIBR8UULEDbNACewEYizGS1HqJP3BwzCT3HcAtp3prJd3OLw__"
             alt="agri-img"
             className="w-full h-auto"
           />
