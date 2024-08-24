@@ -11,7 +11,7 @@ function MyDropzone({ className }) {
   const [files, setFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0); //! For progress bar
   const [retryAttempts, setRetryAttempts] = useState(0);
-  // const [failedFiles, setFailedFiles] = useState([]);
+  //! Failed files array
   let failedFiles = [];
   const [retryingMessage, setRetryingMessage] = useState(""); //! For retrying message
   const [uploadMessage, setUploadMessage] = useState(""); //! For initial uploading messages (first upload)
@@ -198,6 +198,9 @@ function MyDropzone({ className }) {
           setFinalFailedFiles(failedFiles);
           console.log(failedFiles);
           setUploadMessage("Final Upload Failed! Please Retry.");
+          setTimeout(() => {
+            setUploading(false);
+          }, 5000);
           setFiles([]);
         }
         currFiles = [...failedFiles];
